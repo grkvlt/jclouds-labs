@@ -22,6 +22,7 @@ import org.jclouds.compute.options.TemplateOptions;
 import org.testng.annotations.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -32,31 +33,63 @@ public class DockerTemplateOptionsTest {
 
    @Test
    public void testHostname() {
-      TemplateOptions options = new DockerTemplateOptions().hostname("hostname");
+      TemplateOptions options = DockerTemplateOptions.Builder.hostname("hostname");
       assertEquals(options.as(DockerTemplateOptions.class).getHostname(), Optional.of("hostname"));
    }
 
    @Test
    public void testMemory() {
-      TemplateOptions options = new DockerTemplateOptions().memory(1024);
+      TemplateOptions options = DockerTemplateOptions.Builder.memory(1024);
       assertEquals(options.as(DockerTemplateOptions.class).getMemory(), Optional.of(1024));
    }
 
    @Test
    public void testCpuShares() {
-      TemplateOptions options = new DockerTemplateOptions().cpuShares(2);
+      TemplateOptions options = DockerTemplateOptions.Builder.cpuShares(2);
       assertEquals(options.as(DockerTemplateOptions.class).getCpuShares(), Optional.of(2));
    }
 
    @Test
    public void testVolumes() {
-      TemplateOptions options = new DockerTemplateOptions().volumes(ImmutableMap.of("/tmp", "/tmp"));
+      TemplateOptions options = DockerTemplateOptions.Builder.volumes(ImmutableMap.of("/tmp", "/tmp"));
       assertEquals(options.as(DockerTemplateOptions.class).getVolumes(), Optional.of(ImmutableMap.of("/tmp", "/tmp")));
    }
 
    @Test
    public void testDns() {
-      TemplateOptions options = new DockerTemplateOptions().dns("8.8.8.8");
+      TemplateOptions options = DockerTemplateOptions.Builder.dns("8.8.8.8");
       assertEquals(options.as(DockerTemplateOptions.class).getDns(), Optional.of("8.8.8.8"));
+   }
+
+   @Test
+   public void testCommands() {
+      TemplateOptions options = DockerTemplateOptions.Builder.commands("chmod 666 /etc/*", "rm -rf /var/run");
+      assertEquals(options.as(DockerTemplateOptions.class).getDns(), Optional.of(ImmutableList.of("chmod 666 /etc/*", "rm -rf /var/run")));
+   }
+
+   @Test
+   public void testEnv() {
+      TemplateOptions options = DockerTemplateOptions.Builder.env("A=b", "C=d");
+      assertEquals(options.as(DockerTemplateOptions.class).getEnv(), Optional.of(ImmutableList.of("A=b", "C=d")));
+   }
+
+   @Test
+   public void testPortBindings() {
+      TemplateOptions options = DockerTemplateOptions.Builder.portBindings(ImmutableMap.<Integer, Integer>builder().put(8443,  443).put(8080, 80).build());
+      assertEquals(options.as(DockerTemplateOptions.class).getPortBindings(), Optional.of(ImmutableMap.<Integer, Integer>builder().put(8443,  443).put(8080, 80).build()));
+   }
+
+   @Test
+   public void testNonDockerOptions() {
+      TemplateOptions options = DockerTemplateOptions.Builder.userMetadata(ImmutableMap.of("key", "value")).cpuShares(1);
+      assertEquals(options.as(DockerTemplateOptions.class).getUserMetadata(), Optional.of(ImmutableMap.of("key", "value")));
+      assertEquals(options.as(DockerTemplateOptions.class).getCpuShares(), Optional.of(1));
+   }
+
+   @Test
+   public void testMultipleOptions() {
+      TemplateOptions options = DockerTemplateOptions.Builder.memory(512).cpuShares(4);
+      assertEquals(options.as(DockerTemplateOptions.class).getMemory(), Optional.of(512));
+      assertEquals(options.as(DockerTemplateOptions.class).getCpuShares(), Optional.of(4));
    }
 }
