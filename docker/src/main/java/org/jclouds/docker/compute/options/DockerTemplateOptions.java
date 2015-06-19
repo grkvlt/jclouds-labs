@@ -51,7 +51,7 @@ import com.google.common.collect.ImmutableMap;
  */
 public class DockerTemplateOptions extends TemplateOptions implements Cloneable {
 
-   protected Optional<String> dns = Optional.absent();
+   protected Optional<List<String>> dns = Optional.absent();
    protected Optional<String> hostname = Optional.absent();
    protected Optional<Integer> memory = Optional.absent();
    protected Optional<Integer> cpuShares = Optional.absent();
@@ -140,9 +140,13 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
       return this;
    }
 
-   public DockerTemplateOptions dns(@Nullable String dns) {
-      this.dns = Optional.fromNullable(dns);
+   public DockerTemplateOptions dns(Iterable<String> dns) {
+      this.dns = Optional.<List<String>>of(ImmutableList.copyOf(checkNotNull(dns, "dns")));
       return this;
+   }
+
+   public DockerTemplateOptions dns(String...dns) {
+      return dns(ImmutableList.copyOf(checkNotNull(dns, "dns")));
    }
 
    public DockerTemplateOptions hostname(@Nullable String hostname) {
@@ -195,7 +199,7 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
 
    public Optional<Map<String, String>> getVolumes() { return volumes; }
 
-   public Optional<String> getDns() { return dns; }
+   public Optional<List<String>> getDns() { return dns; }
 
    public Optional<String> getHostname() { return hostname; }
 
@@ -220,9 +224,17 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
       }
 
       /**
-       * @see DockerTemplateOptions#dns(String)
+       * @see DockerTemplateOptions#dns(String...)
        */
-      public static DockerTemplateOptions dns(@Nullable String dns) {
+      public static DockerTemplateOptions dns(String...dns) {
+         DockerTemplateOptions options = new DockerTemplateOptions();
+         return options.dns(dns);
+      }
+
+      /**
+       * @see DockerTemplateOptions#dns(Iterable)
+       */
+      public static DockerTemplateOptions dns(Iterable<String> dns) {
          DockerTemplateOptions options = new DockerTemplateOptions();
          return options.dns(dns);
       }

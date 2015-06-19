@@ -58,19 +58,19 @@ public class DockerTemplateOptionsTest {
    @Test
    public void testDns() {
       TemplateOptions options = DockerTemplateOptions.Builder.dns("8.8.8.8");
-      assertEquals(options.as(DockerTemplateOptions.class).getDns(), Optional.of("8.8.8.8"));
+      assertEquals(options.as(DockerTemplateOptions.class).getDns(), Optional.of(ImmutableList.of("8.8.8.8")));
    }
 
    @Test
    public void testCommands() {
       TemplateOptions options = DockerTemplateOptions.Builder.commands("chmod 666 /etc/*", "rm -rf /var/run");
-      assertEquals(options.as(DockerTemplateOptions.class).getDns(), Optional.of(ImmutableList.of("chmod 666 /etc/*", "rm -rf /var/run")));
+      assertEquals(options.as(DockerTemplateOptions.class).getCommands(), Optional.of(ImmutableList.of("chmod 666 /etc/*", "rm -rf /var/run")));
    }
 
    @Test
    public void testEnv() {
-      TemplateOptions options = DockerTemplateOptions.Builder.env("A=b", "C=d");
-      assertEquals(options.as(DockerTemplateOptions.class).getEnv(), Optional.of(ImmutableList.of("A=b", "C=d")));
+      TemplateOptions options = DockerTemplateOptions.Builder.env(ImmutableList.of("HOST=abc", "PORT=1234"));
+      assertEquals(options.as(DockerTemplateOptions.class).getEnv(), Optional.of(ImmutableList.of("HOST=abc", "PORT=1234")));
    }
 
    @Test
@@ -82,7 +82,7 @@ public class DockerTemplateOptionsTest {
    @Test
    public void testNonDockerOptions() {
       TemplateOptions options = DockerTemplateOptions.Builder.userMetadata(ImmutableMap.of("key", "value")).cpuShares(1);
-      assertEquals(options.as(DockerTemplateOptions.class).getUserMetadata(), Optional.of(ImmutableMap.of("key", "value")));
+      assertEquals(options.as(DockerTemplateOptions.class).getUserMetadata(), ImmutableMap.of("key", "value"));
       assertEquals(options.as(DockerTemplateOptions.class).getCpuShares(), Optional.of(1));
    }
 
@@ -92,4 +92,5 @@ public class DockerTemplateOptionsTest {
       assertEquals(options.as(DockerTemplateOptions.class).getMemory(), Optional.of(512));
       assertEquals(options.as(DockerTemplateOptions.class).getCpuShares(), Optional.of(4));
    }
+
 }
