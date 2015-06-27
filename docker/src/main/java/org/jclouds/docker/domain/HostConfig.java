@@ -77,7 +77,7 @@ public abstract class HostConfig {
       private List<String> binds = Lists.newArrayList();
       private List<Map<String, String>> lxcConf = Lists.newArrayList();
       private boolean privileged;
-      private List<String> dns;
+      private List<String> dns = Lists.newArrayList();
       private String dnsSearch;
       private Map<String, List<Map<String, String>>> portBindings = Maps.newLinkedHashMap();
       private List<String> links = Lists.newArrayList();
