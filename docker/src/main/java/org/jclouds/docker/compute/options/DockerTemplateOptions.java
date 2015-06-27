@@ -29,7 +29,6 @@ import org.jclouds.javax.annotation.Nullable;
 import org.jclouds.scriptbuilder.domain.Statement;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -51,14 +50,14 @@ import com.google.common.collect.ImmutableMap;
  */
 public class DockerTemplateOptions extends TemplateOptions implements Cloneable {
 
-   protected Optional<List<String>> dns = Optional.absent();
-   protected Optional<String> hostname = Optional.absent();
-   protected Optional<Integer> memory = Optional.absent();
-   protected Optional<Integer> cpuShares = Optional.absent();
-   protected Optional<List<String>> commands = Optional.absent();
-   protected Optional<Map<String, String>> volumes = Optional.absent();
-   protected Optional<List<String>> env = Optional.absent();
-   protected Optional<Map<Integer, Integer>> portBindings = Optional.absent();
+   protected List<String> dns = ImmutableList.of();
+   protected String hostname;
+   protected Integer memory;
+   protected Integer cpuShares;
+   protected List<String> commands = ImmutableList.of();
+   protected Map<String, String> volumes = ImmutableMap.of();
+   protected List<String> env = ImmutableList.of();
+   protected Map<Integer, Integer> portBindings = ImmutableMap.of();
 
    @Override
    public DockerTemplateOptions clone() {
@@ -72,29 +71,29 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
       super.copyTo(to);
       if (to instanceof DockerTemplateOptions) {
          DockerTemplateOptions eTo = DockerTemplateOptions.class.cast(to);
-         if (volumes.isPresent()) {
-            eTo.volumes(getVolumes().get());
+         if (!volumes.isEmpty()) {
+            eTo.volumes(volumes);
          }
-         if (hostname.isPresent()) {
-            eTo.hostname(hostname.get());
+         if (hostname != null) {
+            eTo.hostname(hostname);
          }
-         if (dns.isPresent()) {
-            eTo.dns(dns.get());
+         if (!dns.isEmpty()) {
+            eTo.dns(dns);
          }
-         if (memory.isPresent()) {
-            eTo.memory(memory.get());
+         if (memory != null) {
+            eTo.memory(memory);
          }
-         if (commands.isPresent()) {
-            eTo.commands(commands.get());
+         if (commands.isEmpty()) {
+            eTo.commands(commands);
          }
-         if (cpuShares.isPresent()) {
-             eTo.cpuShares(cpuShares.get());
+         if (cpuShares != null) {
+             eTo.cpuShares(cpuShares);
          }
-         if (env.isPresent()) {
-             eTo.env(env.get());
+         if (!env.isEmpty()) {
+             eTo.env(env);
          }
-         if (portBindings.isPresent()) {
-             eTo.portBindings(portBindings.get());
+         if (!portBindings.isEmpty()) {
+             eTo.portBindings(portBindings);
          }
       }
    }
@@ -136,12 +135,12 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
    }
 
    public DockerTemplateOptions volumes(Map<String, String> volumes) {
-      this.volumes = Optional.<Map<String, String>>of(ImmutableMap.copyOf(checkNotNull(volumes, "volumes")));
+      this.volumes = ImmutableMap.copyOf(checkNotNull(volumes, "volumes"));
       return this;
    }
 
    public DockerTemplateOptions dns(Iterable<String> dns) {
-      this.dns = Optional.<List<String>>of(ImmutableList.copyOf(checkNotNull(dns, "dns")));
+      this.dns = ImmutableList.copyOf(checkNotNull(dns, "dns"));
       return this;
    }
 
@@ -150,17 +149,17 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
    }
 
    public DockerTemplateOptions hostname(@Nullable String hostname) {
-      this.hostname = Optional.fromNullable(hostname);
+      this.hostname = hostname;
       return this;
    }
 
    public DockerTemplateOptions memory(@Nullable Integer memory) {
-      this.memory = Optional.fromNullable(memory);
+      this.memory = memory;
       return this;
    }
 
    public DockerTemplateOptions commands(Iterable<String> commands) {
-      this.commands = Optional.<List<String>>of(ImmutableList.copyOf(checkNotNull(commands, "commands")));
+      this.commands = ImmutableList.copyOf(checkNotNull(commands, "commands"));
       return this;
    }
 
@@ -169,12 +168,12 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
    }
 
    public DockerTemplateOptions cpuShares(@Nullable Integer cpuShares) {
-      this.cpuShares = Optional.fromNullable(cpuShares);
+      this.cpuShares = cpuShares;
       return this;
    }
 
    public DockerTemplateOptions env(Iterable<String> env) {
-      this.env = Optional.<List<String>>of(ImmutableList.copyOf(checkNotNull(env, "env")));
+      this.env = ImmutableList.copyOf(checkNotNull(env, "env"));
       return this;
    }
 
@@ -193,25 +192,25 @@ public class DockerTemplateOptions extends TemplateOptions implements Cloneable 
     * @param portBindings the map of host to container port bindings
     */
    public DockerTemplateOptions portBindings(Map<Integer, Integer> portBindings) {
-      this.portBindings = Optional.<Map<Integer, Integer>>of(ImmutableMap.copyOf(checkNotNull(portBindings, "portBindings")));
+      this.portBindings = ImmutableMap.copyOf(checkNotNull(portBindings, "portBindings"));
       return this;
    }
 
-   public Optional<Map<String, String>> getVolumes() { return volumes; }
+   public Map<String, String> getVolumes() { return volumes; }
 
-   public Optional<List<String>> getDns() { return dns; }
+   public List<String> getDns() { return dns; }
 
-   public Optional<String> getHostname() { return hostname; }
+   public String getHostname() { return hostname; }
 
-   public Optional<Integer> getMemory() { return memory; }
+   public Integer getMemory() { return memory; }
 
-   public Optional<List<String>> getCommands() { return commands; }
+   public List<String> getCommands() { return commands; }
 
-   public Optional<Integer> getCpuShares() { return cpuShares; }
+   public Integer getCpuShares() { return cpuShares; }
 
-   public Optional<List<String>> getEnv() { return env; }
+   public List<String> getEnv() { return env; }
 
-   public Optional<Map<Integer, Integer>> getPortBindings() { return portBindings; }
+   public Map<Integer, Integer> getPortBindings() { return portBindings; }
 
    public static class Builder {
 
