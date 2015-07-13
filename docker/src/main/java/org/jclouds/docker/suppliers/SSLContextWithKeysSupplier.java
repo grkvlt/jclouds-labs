@@ -16,17 +16,36 @@
  */
 package org.jclouds.docker.suppliers;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Throwables.propagate;
+import com.google.common.base.Charsets;
+import com.google.common.base.Supplier;
+import com.google.common.io.Files;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.jclouds.docker.DockerApiMetadata;
+import org.jclouds.domain.Credentials;
+import org.jclouds.http.HttpUtils;
+import org.jclouds.http.config.SSLModule;
+import org.jclouds.location.Provider;
+import org.jclouds.util.Closeables2;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509ExtendedKeyManager;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.Socket;
-import java.security.KeyManagementException;
+import java.security.GeneralSecurityException;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
+import java.security.KeyStore;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.SecureRandom;
@@ -35,36 +54,20 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509ExtendedKeyManager;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.jclouds.domain.Credentials;
-import org.jclouds.http.HttpUtils;
-import org.jclouds.http.config.SSLModule.TrustAllCerts;
-import org.jclouds.location.Provider;
-import org.jclouds.util.Closeables2;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Supplier;
-import com.google.common.io.Files;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Throwables.propagate;
 
 @Singleton
 public class SSLContextWithKeysSupplier implements Supplier<SSLContext> {
    private final TrustManager[] trustManager;
    private final Supplier<Credentials> creds;
 
+
    @Inject
-   SSLContextWithKeysSupplier(@Provider Supplier<Credentials> creds, HttpUtils utils, TrustAllCerts trustAllCerts) {
-      this.trustManager = utils.trustAllCerts() ? new TrustManager[]{trustAllCerts} : null;
+   SSLContextWithKeysSupplier(@Provider Supplier<Credentials> creds, @Named(DockerApiMetadata.DOCKER_CA_CERT_PATH) String caCertPath, HttpUtils utils, SSLModule.TrustAllCerts insecureTrustManager) {
       this.creds = creds;
+      this.trustManager = !isNullOrEmpty(caCertPath) ? getTrustManagerWithCaCert(caCertPath) : getDefaultTrustManager(utils, insecureTrustManager);
    }
 
    @Override
@@ -74,18 +77,40 @@ public class SSLContextWithKeysSupplier implements Supplier<SSLContext> {
          SSLContext sslContext = SSLContext.getInstance("TLS");
          X509Certificate certificate = getCertificate(loadFile(currentCreds.identity));
          PrivateKey privateKey = getKey(loadFile(currentCreds.credential));
-         sslContext.init(new KeyManager[]{new InMemoryKeyManager(certificate, privateKey)}, trustManager, new SecureRandom());
+         KeyManager[] keyManagers = new KeyManager[]{new InMemoryKeyManager(certificate, privateKey)};
+         sslContext.init(keyManagers, trustManager, new SecureRandom());
          return sslContext;
-      } catch (NoSuchAlgorithmException e) {
-         throw propagate(e);
-      } catch (KeyManagementException e) {
-         throw propagate(e);
-      } catch (CertificateException e) {
+      } catch (GeneralSecurityException e) {
          throw propagate(e);
       } catch (IOException e) {
          throw propagate(e);
       }
    }
+
+   private TrustManager[] getTrustManagerWithCaCert(String caCertPath) {
+      try {
+         X509Certificate caCert = getCertificate(loadFile(caCertPath));
+         KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+         trustStore.load(null, null);
+         trustStore.setCertificateEntry("ca", caCert);
+         TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+         tmf.init(trustStore);
+         return tmf.getTrustManagers();
+      } catch (GeneralSecurityException e) {
+         throw propagate(e);
+      } catch (IOException e) {
+         throw propagate(e);
+      }
+   }
+
+   private TrustManager[] getDefaultTrustManager(HttpUtils utils, SSLModule.TrustAllCerts insecureTrustManager) {
+      TrustManager[] trustManagers = null;
+      if (utils.trustAllCerts()) {
+         trustManagers = new TrustManager[]{insecureTrustManager};
+      }
+      return trustManagers;
+   }
+
 
    private static X509Certificate getCertificate(String certificate) {
       try {
@@ -113,7 +138,7 @@ public class SSLContextWithKeysSupplier implements Supplier<SSLContext> {
       }
    }
 
-   private static String loadFile(final String filePath) throws IOException {
+   private static String loadFile(final String filePath) throws IOException{
       return Files.toString(new File(filePath), Charsets.UTF_8);
    }
 

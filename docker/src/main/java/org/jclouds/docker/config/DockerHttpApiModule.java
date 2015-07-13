@@ -16,17 +16,34 @@
  */
 package org.jclouds.docker.config;
 
+import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
+import com.google.inject.Provider;
+import com.google.inject.Scopes;
+import com.squareup.okhttp.ConnectionSpec;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.TlsVersion;
 import org.jclouds.docker.DockerApi;
 import org.jclouds.docker.handlers.DockerErrorHandler;
+import org.jclouds.docker.suppliers.SSLContextWithKeysSupplier;
+import org.jclouds.http.HttpCommandExecutorService;
 import org.jclouds.http.HttpErrorHandler;
+import org.jclouds.http.HttpUtils;
 import org.jclouds.http.annotation.ClientError;
 import org.jclouds.http.annotation.Redirection;
 import org.jclouds.http.annotation.ServerError;
 import org.jclouds.http.config.ConfiguresHttpCommandExecutorService;
+import org.jclouds.http.config.SSLModule;
 import org.jclouds.http.okhttp.OkHttpClientSupplier;
-import org.jclouds.http.okhttp.config.OkHttpCommandExecutorServiceModule;
+import org.jclouds.http.okhttp.OkHttpCommandExecutorService;
 import org.jclouds.rest.ConfiguresHttpApi;
 import org.jclouds.rest.config.HttpApiModule;
+
+import javax.inject.Named;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Configures the Docker connection.
@@ -48,8 +65,45 @@ public class DockerHttpApiModule extends HttpApiModule<DockerApi> {
    @Override
    protected void configure() {
       super.configure();
-      install(new OkHttpCommandExecutorServiceModule());
-      bind(OkHttpClientSupplier.class).to(DockerOkHttpClientSupplier.class);
+      install(new SSLModule());
+      bind(HttpCommandExecutorService.class).to(OkHttpCommandExecutorService.class).in(Scopes.SINGLETON);
+      bind(OkHttpClient.class).toProvider(DockerOkHttpClientProvider.class).in(Scopes.SINGLETON);
+  }
+
+   private static final class DockerOkHttpClientProvider implements Provider<OkHttpClient> {
+      private final HttpUtils utils;
+      private final Supplier<SSLContext> sslContextWithKeysSupplier;
+      private final OkHttpClientSupplier clientSupplier;
+      private final HostnameVerifier hostnameVerifier;
+
+      @Inject
+      DockerOkHttpClientProvider(OkHttpClientSupplier clientSupplier, HttpUtils utils, SSLContextWithKeysSupplier sslContextWithKeysSupplier, @Named("untrusted") HostnameVerifier hostnameVerifier) {
+         this.clientSupplier = clientSupplier;
+         this.utils = utils;
+         this.sslContextWithKeysSupplier = sslContextWithKeysSupplier;
+         this.hostnameVerifier = hostnameVerifier;
+      }
+
+      @Override
+      public OkHttpClient get() {
+         OkHttpClient client = clientSupplier.get();
+         client.setConnectTimeout(utils.getConnectionTimeout(), TimeUnit.MILLISECONDS);
+         client.setReadTimeout(utils.getSocketOpenTimeout(), TimeUnit.MILLISECONDS);
+         client.setFollowRedirects(false);
+         ConnectionSpec tlsSpec = new ConnectionSpec.Builder(ConnectionSpec.MODERN_TLS)
+                 .tlsVersions(TlsVersion.TLS_1_0, TlsVersion.TLS_1_1, TlsVersion.TLS_1_2)
+                 .build();
+         ConnectionSpec cleartextSpec = new ConnectionSpec.Builder(ConnectionSpec.CLEARTEXT)
+                 .build();
+         client.setConnectionSpecs(ImmutableList.of(tlsSpec, cleartextSpec));
+         client.setSslSocketFactory(sslContextWithKeysSupplier.get().getSocketFactory());
+
+         if (utils.relaxHostname()) {
+            client.setHostnameVerifier(hostnameVerifier);
+         }
+         return client;
+      }
    }
+
 
 }
