@@ -84,7 +84,9 @@ public class DockerComputeServiceAdapter implements
       TemplateOptions options = template.getOptions();
       checkNotNull(options, "template options was null");
 
-      String imageId = checkNotNull(template.getImage().getId(), "template image id must not be null");
+      String imageId = template.getImage().getId();
+      String imageName = template.getImage().getName();
+
       String loginUser = template.getImage().getDefaultCredentials().getUser();
       String loginUserPassword = template.getImage().getDefaultCredentials().getOptionalPassword().or("password");
 
